@@ -30,7 +30,7 @@ layer {
     crop_size: 227
     mean_file: "image_mean.binaryproto"
   }
-  data_param {
+  image_data_param {
     source: "caffe_val_0.txt"
     batch_size: 64
   }
@@ -342,7 +342,7 @@ layer {
   name: "fc8/yelp/att0"
   type: "InnerProduct"
   bottom: "fc7"
-  top: "c8/yelp/att0"
+  top: "fc8/yelp/att0"
   param {
     lr_mult: 10
     decay_mult: 1
@@ -372,19 +372,6 @@ layer {
   top: "accuracy"
   include {
     phase: TEST
-  }
-}
-layer {
-  name: "accuracy/top-3"
-  type: "Accuracy"
-  bottom: "fc8/yelp/att0"
-  bottom: "label"
-  top: "accuracy/top-3"
-  include {
-    phase: TEST
-  }
-  accuracy_param {
-    top_k: 3
   }
 }
 layer {
