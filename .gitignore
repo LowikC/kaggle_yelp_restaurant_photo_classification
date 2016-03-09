@@ -1,3 +1,7 @@
 data/raw/train_photos/
 data/raw/*.tgz
 *.pyc
+data/db
+data/raw
+*.caffemodel
+*-checkpoint.ipynb
