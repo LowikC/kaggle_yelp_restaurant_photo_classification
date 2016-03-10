@@ -757,3 +757,48 @@ layer {
   top: "loss/yelp/attribute7"
   loss_weight: 0.11111
 }
+
+
+# Attribute 8
+layer {
+  name: "fc8/yelp/attribute8"
+  type: "InnerProduct"
+  bottom: "fc7"
+  top: "fc8/yelp/attribute8"
+  param {
+    lr_mult: 10
+    decay_mult: 1
+  }
+  param {
+    lr_mult: 20
+    decay_mult: 0
+  }
+  inner_product_param {
+    num_output: 2
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+layer {
+  name: "accuracy/yelp/attribute8"
+  type: "Accuracy"
+  bottom: "fc8/yelp/attribute8"
+  bottom: "attribute8"
+  top: "accuracy/yelp/attribute8"
+  include {
+    phase: TEST
+  }
+}
+layer {
+  name: "loss/yelp/attribute8"
+  type: "SoftmaxWithLoss"
+  bottom: "fc8/yelp/attribute8"
+  bottom: "attribute8"
+  top: "loss/yelp/attribute8"
+  loss_weight: 0.11111
+}

@@ -4,13 +4,18 @@ layer {
   type: "Data"
   top: "data"
   #top: "ignored_label"
+  include {
+    phase: TRAIN
+  }
   transform_param {
     mirror: true
     crop_size: 227
-    mean_file: "image_mean.binaryproto"
+    mean_value: 99
+    mean_value: 111
+    mean_value: 127
   }
   data_param {
-    source: "train_image_lmdb"
+    source: "all_images_lmdb"
     batch_size: 256
     backend: LMDB
   }
@@ -19,9 +24,48 @@ layer {
   name: "labels"
   type: "Data"
   top: "labels"
+  include {
+    phase: TRAIN
+  }
   data_param {
     source: "all_train_labels_lmdb"
     batch_size: 256
+    backend: LMDB
+  }
+}
+
+# Fake test data, not used
+layer {
+  name: "data"
+  type: "Data"
+  top: "data"
+  #top: "ignored_label"
+  include {
+    phase: TEST
+  }
+  transform_param {
+    mirror: true
+    crop_size: 227
+    mean_value: 99
+    mean_value: 111
+    mean_value: 127
+  }
+  data_param {
+    source: "val_image_lmdb"
+    batch_size: 1
+    backend: LMDB
+  }
+}
+layer {
+  name: "labels"
+  type: "Data"
+  top: "labels"
+  include {
+    phase: TEST
+  }
+  data_param {
+    source: "val_labels_lmdb"
+    batch_size: 1
     backend: LMDB
   }
 }
@@ -638,3 +682,38 @@ layer {
   top: "loss/yelp/attribute7"
   loss_weight: 0.11111
 }
+
+# Attribute 8
+layer {
+  name: "fc8/yelp/attribute8"
+  type: "InnerProduct"
+  bottom: "fc7"
+  top: "fc8/yelp/attribute8"
+  param {
+    lr_mult: 10
+    decay_mult: 1
+  }
+  param {
+    lr_mult: 20
+    decay_mult: 0
+  }
+  inner_product_param {
+    num_output: 2
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+layer {
+  name: "loss/yelp/attribute8"
+  type: "SoftmaxWithLoss"
+  bottom: "fc8/yelp/attribute8"
+  bottom: "attribute8"
+  top: "loss/yelp/attribute8"
+  loss_weight: 0.11111
+}
+

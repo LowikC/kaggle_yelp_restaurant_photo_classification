@@ -1,0 +1,527 @@
+name: "YelpNet"
+input: "data"  # We need only the image
+input_dim: 256 # Process by batch of 256 images
+input_dim: 3
+input_dim: 227
+input_dim: 227
+
+layer {
+  name: "conv1"
+  type: "Convolution"
+  bottom: "data"
+  top: "conv1"
+  convolution_param {
+    num_output: 96
+    kernel_size: 11
+    stride: 4
+  }
+}
+layer {
+  name: "relu1"
+  type: "ReLU"
+  bottom: "conv1"
+  top: "conv1"
+}
+layer {
+  name: "pool1"
+  type: "Pooling"
+  bottom: "conv1"
+  top: "pool1"
+  pooling_param {
+    pool: MAX
+    kernel_size: 3
+    stride: 2
+  }
+}
+layer {
+  name: "norm1"
+  type: "LRN"
+  bottom: "pool1"
+  top: "norm1"
+  lrn_param {
+    local_size: 5
+    alpha: 0.0001
+    beta: 0.75
+  }
+}
+layer {
+  name: "conv2"
+  type: "Convolution"
+  bottom: "norm1"
+  top: "conv2"
+  convolution_param {
+    num_output: 256
+    pad: 2
+    kernel_size: 5
+    group: 2
+  }
+}
+layer {
+  name: "relu2"
+  type: "ReLU"
+  bottom: "conv2"
+  top: "conv2"
+}
+layer {
+  name: "pool2"
+  type: "Pooling"
+  bottom: "conv2"
+  top: "pool2"
+  pooling_param {
+    pool: MAX
+    kernel_size: 3
+    stride: 2
+  }
+}
+layer {
+  name: "norm2"
+  type: "LRN"
+  bottom: "pool2"
+  top: "norm2"
+  lrn_param {
+    local_size: 5
+    alpha: 0.0001
+    beta: 0.75
+  }
+}
+layer {
+  name: "conv3"
+  type: "Convolution"
+  bottom: "norm2"
+  top: "conv3"
+  convolution_param {
+    num_output: 384
+    pad: 1
+    kernel_size: 3
+  }
+}
+layer {
+  name: "relu3"
+  type: "ReLU"
+  bottom: "conv3"
+  top: "conv3"
+}
+layer {
+  name: "conv4"
+  type: "Convolution"
+  bottom: "conv3"
+  top: "conv4"
+  convolution_param {
+    num_output: 384
+    pad: 1
+    kernel_size: 3
+    group: 2
+  }
+}
+layer {
+  name: "relu4"
+  type: "ReLU"
+  bottom: "conv4"
+  top: "conv4"
+}
+layer {
+  name: "conv5"
+  type: "Convolution"
+  bottom: "conv4"
+  top: "conv5"
+  convolution_param {
+    num_output: 256
+    pad: 1
+    kernel_size: 3
+    group: 2
+  }
+}
+layer {
+  name: "relu5"
+  type: "ReLU"
+  bottom: "conv5"
+  top: "conv5"
+}
+layer {
+  name: "pool5"
+  type: "Pooling"
+  bottom: "conv5"
+  top: "pool5"
+  pooling_param {
+    pool: MAX
+    kernel_size: 3
+    stride: 2
+  }
+}
+layer {
+  name: "fc6"
+  type: "InnerProduct"
+  bottom: "pool5"
+  top: "fc6"
+  inner_product_param {
+    num_output: 4096
+  }
+}
+layer {
+  name: "relu6"
+  type: "ReLU"
+  bottom: "fc6"
+  top: "fc6"
+}
+layer {
+  name: "drop6"
+  type: "Dropout"
+  bottom: "fc6"
+  top: "fc6"
+  dropout_param {
+    dropout_ratio: 0.5
+  }
+}
+layer {
+  name: "fc7"
+  type: "InnerProduct"
+  bottom: "fc6"
+  top: "fc7"
+  inner_product_param {
+    num_output: 4096
+  }
+}
+layer {
+  name: "relu7"
+  type: "ReLU"
+  bottom: "fc7"
+  top: "fc7"
+}
+layer {
+  name: "drop7"
+  type: "Dropout"
+  bottom: "fc7"
+  top: "fc7"
+  dropout_param {
+    dropout_ratio: 0.5
+  }
+}
+
+# One FC8 layer per attribute
+
+# Attribute 0
+layer {
+  name: "fc8/yelp/attribute0"
+  type: "InnerProduct"
+  bottom: "fc7"
+  top: "fc8/yelp/attribute0"
+  inner_product_param {
+    num_output: 2
+  }
+}
+# Softmax to normalize output
+layer {
+  name: "prob/yelp/attribute0"
+  type: "Softmax"
+  bottom: "fc8/yelp/attribute0"
+  top: "prob/yelp/attribute0"
+}
+# Previous layer outputs a Nx2x1x1 blob
+# We split it to keep only the positive probability
+# It outputs 2 blobs Nx1x1x1
+# ie., probability to have the label.
+# TODO: I should output directly only one probability with a Sidmoid layer?
+layer {
+  name: "slicer/prob/yelp/attribute0"
+  type: "Slice"
+  bottom: "prob/yelp/attribute0"
+  top: "prob_neg/yelp/attribute0"
+  top: "prob_pos/yelp/attribute0"
+  slice_param {
+    axis: 1
+    slice_point: 1
+  }
+}
+layer {
+    name: "silence/prob_neg/yelp/attribute0"
+    type: "Silence"
+    bottom: "prob_neg/yelp/attribute0"
+}
+
+
+# Attribute 1
+layer {
+  name: "fc8/yelp/attribute1"
+  type: "InnerProduct"
+  bottom: "fc7"
+  top: "fc8/yelp/attribute1"
+  inner_product_param {
+    num_output: 2
+  }
+}
+layer {
+  name: "prob/yelp/attribute1"
+  type: "Softmax"
+  bottom: "fc8/yelp/attribute1"
+  top: "prob/yelp/attribute1"
+}
+layer {
+  name: "slicer/prob/yelp/attribute1"
+  type: "Slice"
+  bottom: "prob/yelp/attribute1"
+  top: "prob_neg/yelp/attribute1"
+  top: "prob_pos/yelp/attribute1"
+  slice_param {
+    axis: 1
+    slice_point: 1
+  }
+}
+layer {
+    name: "silence/prob_neg/yelp/attribute1"
+    type: "Silence"
+    bottom: "prob_neg/yelp/attribute1"
+}
+
+# Attribute 2
+layer {
+  name: "fc8/yelp/attribute2"
+  type: "InnerProduct"
+  bottom: "fc7"
+  top: "fc8/yelp/attribute2"
+  inner_product_param {
+    num_output: 2
+  }
+}
+layer {
+  name: "prob/yelp/attribute2"
+  type: "Softmax"
+  bottom: "fc8/yelp/attribute2"
+  top: "prob/yelp/attribute2"
+}
+layer {
+  name: "slicer/prob/yelp/attribute2"
+  type: "Slice"
+  bottom: "prob/yelp/attribute2"
+  top: "prob_neg/yelp/attribute2"
+  top: "prob_pos/yelp/attribute2"
+  slice_param {
+    axis: 1
+    slice_point: 1
+  }
+}
+layer {
+    name: "silence/prob_neg/yelp/attribute2"
+    type: "Silence"
+    bottom: "prob_neg/yelp/attribute2"
+}
+
+# Attribute 3
+layer {
+  name: "fc8/yelp/attribute3"
+  type: "InnerProduct"
+  bottom: "fc7"
+  top: "fc8/yelp/attribute3"
+  inner_product_param {
+    num_output: 2
+  }
+}
+layer {
+  name: "prob/yelp/attribute3"
+  type: "Softmax"
+  bottom: "fc8/yelp/attribute3"
+  top: "prob/yelp/attribute3"
+}
+layer {
+  name: "slicer/prob/yelp/attribute3"
+  type: "Slice"
+  bottom: "prob/yelp/attribute3"
+  top: "prob_neg/yelp/attribute3"
+  top: "prob_pos/yelp/attribute3"
+  slice_param {
+    axis: 1
+    slice_point: 1
+  }
+}
+layer {
+    name: "silence/prob_neg/yelp/attribute3"
+    type: "Silence"
+    bottom: "prob_neg/yelp/attribute3"
+}
+
+
+# Attribute 4
+layer {
+  name: "fc8/yelp/attribute4"
+  type: "InnerProduct"
+  bottom: "fc7"
+  top: "fc8/yelp/attribute4"
+  inner_product_param {
+    num_output: 2
+  }
+}
+layer {
+  name: "prob/yelp/attribute4"
+  type: "Softmax"
+  bottom: "fc8/yelp/attribute4"
+  top: "prob/yelp/attribute4"
+}
+layer {
+  name: "slicer/prob/yelp/attribute4"
+  type: "Slice"
+  bottom: "prob/yelp/attribute4"
+  top: "prob_neg/yelp/attribute4"
+  top: "prob_pos/yelp/attribute4"
+  slice_param {
+    axis: 1
+    slice_point: 1
+  }
+}
+layer {
+    name: "silence/prob_neg/yelp/attribute4"
+    type: "Silence"
+    bottom: "prob_neg/yelp/attribute4"
+}
+
+
+# Attribute 5
+layer {
+  name: "fc8/yelp/attribute5"
+  type: "InnerProduct"
+  bottom: "fc7"
+  top: "fc8/yelp/attribute5"
+  inner_product_param {
+    num_output: 2
+  }
+}
+layer {
+  name: "prob/yelp/attribute5"
+  type: "Softmax"
+  bottom: "fc8/yelp/attribute5"
+  top: "prob/yelp/attribute5"
+}
+layer {
+  name: "slicer/prob/yelp/attribute5"
+  type: "Slice"
+  bottom: "prob/yelp/attribute5"
+  top: "prob_neg/yelp/attribute5"
+  top: "prob_pos/yelp/attribute5"
+  slice_param {
+    axis: 1
+    slice_point: 1
+  }
+}
+layer {
+    name: "silence/prob_neg/yelp/attribute5"
+    type: "Silence"
+    bottom: "prob_neg/yelp/attribute5"
+}
+
+
+# Attribute 6
+layer {
+  name: "fc8/yelp/attribute6"
+  type: "InnerProduct"
+  bottom: "fc7"
+  top: "fc8/yelp/attribute6"
+  inner_product_param {
+    num_output: 2
+  }
+}
+layer {
+  name: "prob/yelp/attribute6"
+  type: "Softmax"
+  bottom: "fc8/yelp/attribute6"
+  top: "prob/yelp/attribute6"
+}
+layer {
+  name: "slicer/prob/yelp/attribute6"
+  type: "Slice"
+  bottom: "prob/yelp/attribute6"
+  top: "prob_neg/yelp/attribute6"
+  top: "prob_pos/yelp/attribute6"
+  slice_param {
+    axis: 1
+    slice_point: 1
+  }
+}
+layer {
+    name: "silence/prob_neg/yelp/attribute6"
+    type: "Silence"
+    bottom: "prob_neg/yelp/attribute6"
+}
+
+# Attribute 1
+layer {
+  name: "fc8/yelp/attribute7"
+  type: "InnerProduct"
+  bottom: "fc7"
+  top: "fc8/yelp/attribute7"
+  inner_product_param {
+    num_output: 2
+  }
+}
+layer {
+  name: "prob/yelp/attribute7"
+  type: "Softmax"
+  bottom: "fc8/yelp/attribute7"
+  top: "prob/yelp/attribute7"
+}
+layer {
+  name: "slicer/prob/yelp/attribute7"
+  type: "Slice"
+  bottom: "prob/yelp/attribute7"
+  top: "prob_neg/yelp/attribute7"
+  top: "prob_pos/yelp/attribute7"
+  slice_param {
+    axis: 1
+    slice_point: 1
+  }
+}
+layer {
+    name: "silence/prob_neg/yelp/attribute7"
+    type: "Silence"
+    bottom: "prob_neg/yelp/attribute7"
+}
+
+# Attribute 8
+layer {
+  name: "fc8/yelp/attribute8"
+  type: "InnerProduct"
+  bottom: "fc7"
+  top: "fc8/yelp/attribute8"
+  inner_product_param {
+    num_output: 2
+  }
+}
+layer {
+  name: "prob/yelp/attribute8"
+  type: "Softmax"
+  bottom: "fc8/yelp/attribute8"
+  top: "prob/yelp/attribute8"
+}
+layer {
+  name: "slicer/prob/yelp/attribute8"
+  type: "Slice"
+  bottom: "prob/yelp/attribute8"
+  top: "prob_neg/yelp/attribute8"
+  top: "prob_pos/yelp/attribute8"
+  slice_param {
+    axis: 1
+    slice_point: 1
+  }
+}
+layer {
+    name: "silence/prob_neg/yelp/attribute8"
+    type: "Silence"
+    bottom: "prob_neg/yelp/attribute8"
+}
+
+# Concatenate the probabilities on each attribute
+# Output a Nx9x1x1 blob where blob[i] is the probability for the image to have the attribute i
+layer {
+  name: "concat/yelp/attributes"
+  bottom: "prob_pos/yelp/attribute0"
+  bottom: "prob_pos/yelp/attribute1"
+  bottom: "prob_pos/yelp/attribute2"
+  bottom: "prob_pos/yelp/attribute3"
+  bottom: "prob_pos/yelp/attribute4"
+  bottom: "prob_pos/yelp/attribute5"
+  bottom: "prob_pos/yelp/attribute6"
+  bottom: "prob_pos/yelp/attribute7"
+  bottom: "prob_pos/yelp/attribute8"
+  top: "prob_pos/yelp/attributes"
+  type: "Concat"
+  concat_param {
+    axis: 1
+  }
+}
