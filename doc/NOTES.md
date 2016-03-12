@@ -8,7 +8,8 @@
   2. others attributes should be harder to detect (takes_reservations)
 6. Check if attribute3 can be predicted knowing the other attributes.
   1. Tried quickly with a RF: accuracy is quite low (~0.57)
-7. It seems that all attributes (except) can be predicted knowing the other attributes. (acc > 0.8)
+7. It seems that all attributes (except att3) can be predicted knowing the other attributes. (acc > 0.8)
+
 
 
 
