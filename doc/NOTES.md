@@ -7,8 +7,7 @@
 4. attribute3 (outdoor_seating) seems hard to predict (~0.54 accuracy)
   1. that's weird, it seems easy to distinguish outdoor seating on pictures.
   2. others attributes should be harder to detect (takes_reservations)
-  3. My guess is that only some instances in a group are taken outside, so, most of the pictures associated to the business are not taken outside.
-  That means that considering that the business labels correspond to the photos labels is wrong.
+  3. My guess is that only some instances in a group are taken outside, so, most of the pictures associated to the business are not taken outside. That means that considering that the business labels correspond to the photos labels is wrong.
   
 6. Check if attribute3 can be predicted knowing the other attributes.
   1. Tried quickly with a RF: accuracy is quite low (~0.57)
@@ -24,24 +23,32 @@
    
 10. Extracted CNN features from caffenet and googlenet
    
+11. Trained independent logistic regression classifier on extracted features
+  1. Optimize hyperparameters on f1-score.
+  
 
 
+## Ideas/Todos
+* Integrate correlation between attributes
+  * for each label, predict it from others labels probability
+  * check how to add prior knowledge in a better way
+  * a possibility is to trained in cascade, starting with the easier attributes and then add the prediction of previous attributes to the CNN features.
+  
+* Trained classifier at instance level and merge after
+  * Check how to aggregate prediction to business
 
+* Try to separe instances inside a business group
+  * Check if similarity measure could help 
 
-## Ideas
-* Train multilabel CNN (finetune caffenet) with CrossEntropyLoss
-* 
-Extract features from pretrained CNN
-  * caffenet, fc6 and fc7
-  * googlenet
+* Check multilabel CNN (finetune caffenet) with CrossEntropyLoss
+
+* Extract features from pretrained CNN
   * resnet (check license)
   
+* Try other models for prediction from CNN features
+  * XGBoost, ...
+  
 * Ensemble of several models
-  * Finetuned CNN
-  * Prediction on from features (LRm XGBoost?)
-  * Prediction from other labels
-    * Predict labels (CNN)
-    * for each label, predict it from others labels probability
-    * check how to add prior knowledge in a better way
-    
-* We d
+  * Majority vote
+  * Stacking
+  * ...
