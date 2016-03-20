@@ -52,3 +52,17 @@
   * Majority vote
   * Stacking
   * ...
+
+
+## Links
+
+1. https://github.com/garydoranjr/misvm
+  * multi instance svm
+  * seems easy to use
+2. Deep Multiple Instance Learning for Image Classification and Auto-Annotation: http://jiajunwu.com/papers/dmil_cvpr.pdf
+
+3. Deep Multi-Instance Transfer Learning: http://dkotzias.com/papers/multi-instance%20deep%20learning.pdf
+
+4. DEEP LEARNING OF FEATURE REPRESENTATION WITH MULTIPLE INSTANCE LEARNING FOR MEDICAL IMAGE ANALYSIS: http://research.microsoft.com/pubs/232681/[2014][ICASSP]deep%20learning%20of%20feature%20representation%20with%20multiple%20instance%20for%20medical%20image%20analysis.pdf
+
+5. https://sites.google.com/site/xyzliwen/resource/multiple_instance_learning
