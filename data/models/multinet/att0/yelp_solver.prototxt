@@ -1,0 +1,35 @@
+# Number of train samples: 162905
+# Train batch: 256
+# Train epoch: 637 iter
+
+# Number of validation samples: 71640
+# Validation batch: 64
+# Validation epoch: 1120
+
+net: "yelp_train_val.prototxt"
+
+# Parameters for validation
+test_iter: 1120 # Go through the whole validation set
+test_interval: 637 # Test every train epoch
+test_initialization: true # Test at the beginning
+
+
+# Parameters for learning rate
+base_lr: 0.001 # Start low, as we are finetuning
+lr_policy: "step"
+gamma: 0.1
+stepsize: 6370 # Decrease every 10 epochs
+momentum: 0.9
+weight_decay: 0.0005
+
+max_iter: 19110 # Train on 30 epochs
+
+# Parameter for snapshot
+snapshot: 637  #every epoch
+snapshot_prefix: "yelp_net"
+
+# Display often
+display: 20
+
+solver_mode: GPU # Use the GPU
+
