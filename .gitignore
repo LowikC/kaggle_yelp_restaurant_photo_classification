@@ -7,3 +7,6 @@ data/db/
 data/raw/
 *.list
 *.caffemodel
+*.pyc
+src/.idea
+*.pkl
