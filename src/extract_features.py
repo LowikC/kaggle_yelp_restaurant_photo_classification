@@ -1,9 +1,12 @@
 import numpy as np
 import os
+import sys
 from PIL import Image
 import caffe
+import cv2
 import math
 import argparse
+from ImageTransformer import ImageTransformer
 
 
 def load_images_list(caffe_file_path, images_root):
@@ -24,14 +27,23 @@ def load_images_list(caffe_file_path, images_root):
     return images_full_paths
 
 
-def compute_features(images, net, image_mean, feature_layers):
+def update_progress(progress, max_lenght=15):
+    ratio = max_lenght/100.0
+    progress_length = int(progress * ratio)
+    progress_bar = '#' * progress_length + ' ' * (max_lenght - progress_length)
+    sys.stdout.write('\r[{bar}] {p:.2f}%'.format(bar=progress_bar, p=progress))
+    sys.stdout.flush()
+
+
+def compute_features(images, net, transformer, feature_layers, batch_size, input_layer):
     """ Compute features and output probabilities on each image.
 
     Args:
         images (list): List of full paths to the images to process.
-        image_mean (numpy.array): Mean value per channel of the training set.
-        net (caffe.Net): CNN to process the image.
+        net (caffe.Net): The CNN
+        transformer (caffe.io.Transformer): The data transformer
         feature_layer (list): Names of the feature layers to extract.
+        batch_size (int): Number of images to process per batch.
 
     Returns:
         A dict {layer_name: data} where data is a (N, F) numpy array.
@@ -39,50 +51,43 @@ def compute_features(images, net, image_mean, feature_layers):
     """
 
     # Create empty arrays for each feature
+    # Each array has a shape NxCxHxW
     features = dict()
     for feature_layer in feature_layers:
         if feature_layer in net.blobs:
             feature_blob = net.blobs[feature_layer]
-            n_features = feature_blob.width * feature_blob.height * feature_blob.channels
-            features[feature_layer] = np.zeros((len(images), n_features))
+            shape = (len(images), feature_blob.channels, feature_blob.height, feature_blob.width)
+            features[feature_layer] = np.zeros(shape, dtype=np.float32)
 
     if not features:
         return
-        
-    batch_size = net.blobs['data'].num
+
     n_images = len(images)
     n_batches = int(math.ceil(n_images * 1.0/batch_size))
 
     print("The network will process {b_size} images in parallel.".format(b_size=batch_size))
-    print("We load {n_im} images per batch".format(n_im=batch_size))
+    print("There are {total} images, so there will be {n} batches.".format(total=len(images),
+                                                                           n=n_batches))
     for layer_name, _ in features.items():
         print("We extract features on layer {name}".format(name=layer_name))
 
-
-    # Define the preprocessor
-    transformer = caffe.io.Transformer({'data': net.blobs['data'].data.shape})
-    transformer.set_transpose('data', (2,0,1))
-    transformer.set_mean('data', image_mean) # mean pixel
-    transformer.set_raw_scale('data', 255)  # the reference model operates on images in [0,255] range instead of [0,1]
-    transformer.set_channel_swap('data', (2,1,0))  # the reference model has channels in BGR order instead of RGB]]
-
     # Process per batch
-    n, c, w, h = net.blobs['data'].data.shape
+    n, c, w, h = net.blobs[input_layer].data.shape
     for b in xrange(n_batches):
         offset = b * batch_size
         actual_size = min(batch_size, n_images - offset)
-
-        net.blobs['data'].reshape(actual_size, c, w, h)
-        net.blobs['data'].data[...] = \
-            map(lambda x: transformer.preprocess('data',caffe.io.load_image(x)),
-                images[offset:offset+actual_size])
+        net.blobs[input_layer].reshape(actual_size, c, w, h)
+        net.blobs[input_layer].data[...] = \
+            map(lambda x: transformer.preprocess(cv2.imread(x)), images[offset:offset+actual_size])
 
         net.forward()
 
         for layer_name, features_array in features.items():
-            features_array[offset:offset+actual_size, :] = \
-                net.blobs[layer_name].data[:actual_size].reshape((actual_size, -1))
-        print("Batch {b}/{n_b} done".format(b=b, n_b=n_batches))
+            data = net.blobs[layer_name].data
+            expected_shape = features_array[offset:offset+actual_size, ...].shape
+            features_array[offset:offset+actual_size, ...] = data.reshape(expected_shape)
+
+        update_progress((100.0 * b)/n_batches)
 
     return features
 
@@ -92,7 +97,7 @@ def get_command_args():
     parser.add_argument('--input', '-i', type=str,
                         help=('path to a file containing the image paths.'
                               ' You may use the same file as for Caffe training/testing'))
-    parser.add_argument('--image_root', type=str,
+    parser.add_argument('--image_root', type=str, default='',
                         help=('path to the root directory containing images.'
                               'It will be appended before the image name found in the input file.'))
     parser.add_argument('--output', '-o', type=str,
@@ -104,8 +109,14 @@ def get_command_args():
                              'put a large batch size.')
     parser.add_argument('--mean', type=str,
                         help='Path to the CNN mean file (.npy)')
+    parser.add_argument('--image_dim', type=tuple, default=(256, 256),
+                        help='Dimension of the images used to train the CNN.')
+    parser.add_argument('--batch_size', type=int,
+                        help='Number of images processed in a batch.')
     parser.add_argument('--gpu', action="store_true",
-                        help='Use GPU if defined, otherwise CPU only.')
+                        help='Use GPU')
+    parser.add_argument('--input_layer', type=str, default='data',
+                        help='Name of the input layer.')
     parser.add_argument('--features_layers', nargs='*', dest='features_layers', action='append',
                         help="Layer to use to extract features. You can put several layers:"
                              "--features_layers fc7 fc6")
@@ -115,22 +126,27 @@ def get_command_args():
 
 if __name__ == '__main__':
     args = get_command_args()
+    input_layer = args.input_layer
 
+    # Load the Network.
     caffe.set_mode_cpu()
     net = caffe.Net(args.deploy, args.weights, caffe.TEST)
-
     if args.gpu:
         caffe.set_mode_gpu()
 
-    images = load_images_list(args.input, args.image_root)
+    # Define the preprocessor
     image_mean = np.load(args.mean).mean(1).mean(1)
+    transformer = ImageTransformer(net.blobs[input_layer].data.shape)
+    transformer.set_mean(image_mean)
+    transformer.set_dimensions(args.image_dim)
+
+    images = load_images_list(args.input, args.image_root)
     features_layers = [el for elements in args.features_layers for el in elements]
-    features = compute_features(images, net, image_mean, features_layers)
+    features = compute_features(images, net, transformer, features_layers, args.batch_size, input_layer)
 
     # Save computed arrays
     _, basename = os.path.split(args.input)
     basename, _ = os.path.splitext(basename)
     for layer_name, features_array in features.items():
-        np.save(os.path.join(args.output, basename + '_' + layer_name + '.npy'), features_array)
-
-
+        safe_name = layer_name.replace('/', '_')
+        np.save(os.path.join(args.output, basename + '_' + safe_name + '.npy'), features_array)
